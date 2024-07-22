@@ -1,130 +1,196 @@
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux/.es/hooks/useSelector";
-import { remove } from "../store/cartSlice";
+import React, { Component } from "react";
+import formatCurrency from "../util";
+// import Fade from "react-reveal/Fade";
+import { connect } from "react-redux";
+import Modal from "react-modal";
+// import Zoom from "react-reveal/Zoom";
+import { removeFromCart } from "../actions/cartActions";
+import { createOrder, clearOrder } from "../actions/orderActions";
 
-const Cart = () => {
-  const dispatch = useDispatch();
-  const products = useSelector((state) => state.cart);
-
-  const [productCount, setProductCount] = useState(
-    products.reduce((counts, product) => {
-      counts[product.id] = 1; // Default count for each product is 1
-      return counts;
-    }, {})
-  );
-
-  const increaseCount = (productId) => {
-    setProductCount((prevCounts) => ({
-      ...prevCounts,
-      [productId]: prevCounts[productId] + 1,
-    }));
+class Cart extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      name: "",
+      email: "",
+      address: "",
+      showCheckout: false,
+    };
+  }
+  handleInput = (e) => {
+    this.setState({ [e.target.name]: e.target.value });
   };
-
-  const decreaseCount = (productId) => {
-    if (productCount[productId] > 1) {
-      setProductCount((prevCounts) => ({
-        ...prevCounts,
-        [productId]: prevCounts[productId] - 1,
-      }));
-    } else {
-      // If quantity is 1 or below, remove the product from the cart
-      removeProduct(productId);
-    }
+  createOrder = (e) => {
+    e.preventDefault();
+    const order = {
+      name: this.state.name,
+      email: this.state.email,
+      address: this.state.address,
+      cartItems: this.props.cartItems,
+      total: this.props.cartItems.reduce((a, c) => a + c.price * c.count, 0),
+    };
+    this.props.createOrder(order);
   };
-
-  const removeProduct = (id) => {
-    dispatch(remove(id));
-    setProductCount((prevCounts) => {
-      const newCounts = { ...prevCounts };
-      delete newCounts[id];
-      return newCounts;
-    });
+  closeModal = () => {
+    this.props.clearOrder();
   };
-
-  const calculateTotalPrice = () => {
-    let total = 0;
-    products.forEach((product) => {
-      total += product.price * productCount[product.id];
-    });
-    return total;
-  };
-
-  const cards = products.map((product) => (
-    <div className="card-container" key={product.id}>
-      <div className="card-products">
-        <Card style={{ width: "18rem" }} className="cards">
-          <Card.Img
-            variant="top"
-            src={product.images}
-            style={{ width: "250px", height: "200px" }}
-          />
-          <Card.Body>
-            <Card.Title>{product.title}</Card.Title>
-            <Card.Text>
-              Current Price: <i class="fa fa-inr"></i>
-              {product.price}
-            </Card.Text>
-            <div className="InDe">
-              <div className="price-total">
-                <Card.Text className="card-text">
-                  Subtotal of product price:<i class="fa fa-inr"></i>{" "}
-                  {product.price * productCount[product.id] || product.price}
-                </Card.Text>
-              </div>
-              <div className="price-total">
-                <Button
-                  variant="primary"
-                  className="increament"
-                  style={{ borderRadius: "50%" }}
-                  onClick={() => decreaseCount(product.id)}
-                >
-                  -
-                </Button>
-                <Card.Text className="text">
-                  {productCount[product.id] || 1}
-                </Card.Text>
-                <Button
-                  variant="primary"
-                  className="increament"
-                  style={{ borderRadius: "50%" }}
-                  onClick={() => increaseCount(product.id)}
-                >
-                  +
-                </Button>
-              </div>
-            </div>
-            <Button
-              variant="danger"
-              className="add mt-2"
-              onClick={() => removeProduct(product.id)}
-            >
-              Remove Item
-            </Button>
-          </Card.Body>
-        </Card>
-      </div>
-    </div>
-  ));
-
-  return (
-    <>
-      <div className="text-white">
-        <span style={{ fontSize: 30 }}>My Cart</span> <br />
-        <span style={{ fontSize: 30 }}>
-          Grand Total:<i class="fa fa-inr"></i> {calculateTotalPrice()}
-        </span>
-        {products.length === 0 && (
-          <div className="NoItems">
-            <img
-              src="https://img.freepik.com/free-photo/funny-illustration-3d-cartoon-backpacker_183364-80424.jpg?w=1380&t=st=1690967265~exp=1690967865~hmac=3a953df10987b13a88915a21662843501208169d499267818c9ff582e45e1ca6://cdni.iconscout.com/illustration/premium/thumb/before-login-no-product-in-cart-4006356-3309942.png"
-              alt="Cart Empty image"
-            />
+  render() {
+    const { cartItems, order } = this.props;
+    return (
+      <div>
+        {cartItems.length === 0 ? (
+          <div className="cart cart-header">Cart is empty</div>
+        ) : (
+          <div className="cart cart-header">
+            You have {cartItems.length} in the cart{" "}
           </div>
         )}
-        <div className="card-products mb-4">{cards}</div>
-      </div>
-    </>
-  );
-};
 
-export default Cart;
+        {order && (
+          <Modal isOpen={true} onRequestClose={this.closeModal}>
+            <Zoom>
+              <button className="close-modal" onClick={this.closeModal}>
+                x
+              </button>
+              <div className="order-details">
+                <h3 className="success-message">Your order has been placed.</h3>
+                <h2>Order {order._id}</h2>
+                <ul>
+                  <li>
+                    <div>Name:</div>
+                    <div>{order.name}</div>
+                  </li>
+                  <li>
+                    <div>Email:</div>
+                    <div>{order.email}</div>
+                  </li>
+                  <li>
+                    <div>Address:</div>
+                    <div>{order.address}</div>
+                  </li>
+                  <li>
+                    <div>Date:</div>
+                    <div>{order.createdAt}</div>
+                  </li>
+                  <li>
+                    <div>Total:</div>
+                    <div>{formatCurrency(order.total)}</div>
+                  </li>
+                  <li>
+                    <div>Cart Items:</div>
+                    <div>
+                      {order.cartItems.map((x) => (
+                        <div>
+                          {x.count} {" x "} {x.title}
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </Zoom>
+          </Modal>
+        )}
+        <div>
+          <div className="cart">
+            <Fade left cascade>
+              <ul className="cart-items">
+                {cartItems.map((item) => (
+                  <li key={item._id}>
+                    <div>
+                      <img src={item.image} alt={item.title}></img>
+                    </div>
+                    <div>
+                      <div>{item.title}</div>
+                      <div className="right">
+                        {formatCurrency(item.price)} x {item.count}{" "}
+                        <button
+                          className="button"
+                          onClick={() => this.props.removeFromCart(item)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Fade>
+          </div>
+          {cartItems.length !== 0 && (
+            <div>
+              <div className="cart">
+                <div className="total">
+                  <div>
+                    Total:{" "}
+                    {formatCurrency(
+                      cartItems.reduce((a, c) => a + c.price * c.count, 0)
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      this.setState({ showCheckout: true });
+                    }}
+                    className="button primary"
+                  >
+                    Proceed
+                  </button>
+                </div>
+              </div>
+              {this.state.showCheckout && (
+                <Fade right cascade>
+                  <div className="cart">
+                    <form onSubmit={this.createOrder}>
+                      <ul className="form-container">
+                        <li>
+                          <label>Email</label>
+                          <input
+                            name="email"
+                            type="email"
+                            required
+                            onChange={this.handleInput}
+                          ></input>
+                        </li>
+                        <li>
+                          <label>Name</label>
+                          <input
+                            name="name"
+                            type="text"
+                            required
+                            onChange={this.handleInput}
+                          ></input>
+                        </li>
+                        <li>
+                          <label>Address</label>
+                          <input
+                            name="address"
+                            type="text"
+                            required
+                            onChange={this.handleInput}
+                          ></input>
+                        </li>
+                        <li>
+                          <button className="button primary" type="submit">
+                            Checkout
+                          </button>
+                        </li>
+                      </ul>
+                    </form>
+                  </div>
+                </Fade>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+}
+
+export default connect(
+  (state) => ({
+    order: state.order.order,
+    cartItems: state.cart.cartItems,
+  }),
+  { removeFromCart, createOrder, clearOrder }
+)(Cart);

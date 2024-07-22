@@ -1,73 +1,109 @@
-import React, { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { add, remove } from "../store/cartSlice";
-import { useSelector } from "react-redux/.es/hooks/useSelector";
+import React, { Component } from "react";
+import formatCurrency from "../util";
+// import Fade from "react-reveal/Fade";
+import Modal from "react-modal";
+// import Zoom from "react-reveal/Zoom";
+import { connect } from "react-redux";
+import { fetchProducts } from "../actions/productActions";
+import { addToCart } from "../actions/cartActions";
 
-const Products = () => {
-  const CartProducts = useSelector((state) => state.cart);
-  const dispatch = useDispatch();
-
-  const isProductInCart = (productId) => {
-    for (let x of CartProducts) {
-      if (x.id === productId) {
-        return true;
-      }
-    }
-    return false;
+class Products extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      product: null,
+    };
+  }
+  componentDidMount() {
+    this.props.fetchProducts();
+  }
+  openModal = (product) => {
+    this.setState({ product });
   };
-  console.log(CartProducts);
-  const toggleCart = (product) => {
-    if (isProductInCart(product.id)) {
-      dispatch(remove(product.id));
-    } else {
-      dispatch(add(product));
-    }
+  closeModal = () => {
+    this.setState({ product: null });
   };
-
-  const [products, setProducts] = useState([]);
-  useEffect(() => {
-    fetch("/mocks/products.json")
-      .then((response) => response.json())
-      .then((result) => setProducts(result.products))
-      .catch((e) => console.log(e));
-  }, []);
-
-  const cards = products.map((product) => (
-    <div className="card-container" key={product.id}>
-      <div className="card-products">
-        <Card style={{ width: "18rem" }} className="cards">
-          <Card.Img
-            variant="top"
-            src={product.images}
-            style={{ width: "250px", height: "200px" }}
-          />
-          <Card.Body>
-            <Card.Title>{product.title}</Card.Title>
-            <Card.Text>
-              Current Price: <i className="fa fa-inr"></i>
-              {product.price}
-            </Card.Text>
-            <Button
-              variant="primary"
-              className="add"
-              onClick={() => {
-                toggleCart(product);
-              }}
-            >
-              {isProductInCart(product.id) ? "Remove from Cart" : "Add to Cart"}
-            </Button>
-          </Card.Body>
-        </Card>
+  render() {
+    const { product } = this.state;
+    return (
+      <div>
+        <Fade bottom cascade>
+          {!this.props.products ? (
+            <div>Loading...</div>
+          ) : (
+            <ul className="products">
+              {this.props.products.map((product) => (
+                <li key={product._id}>
+                  <div className="product">
+                    <a
+                      href={"#" + product._id}
+                      onClick={() => this.openModal(product)}
+                    >
+                      <img src={product.image} alt={product.title}></img>
+                      <p>{product.title}</p>
+                    </a>
+                    <div className="product-price">
+                      <div>{formatCurrency(product.price)}</div>
+                      <button
+                        onClick={() => this.props.addToCart(product)}
+                        className="button primary"
+                      >
+                        Add To Cart
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Fade>
+        {product && (
+          <Modal isOpen={true} onRequestClose={this.closeModal}>
+            <Zoom>
+              <button className="close-modal" onClick={this.closeModal}>
+                x
+              </button>
+              <div className="product-details">
+                <img src={product.image} alt={product.title}></img>
+                <div className="product-details-description">
+                  <p>
+                    <strong>{product.title}</strong>
+                  </p>
+                  <p>{product.description}</p>
+                  <p>
+                    Avaiable Sizes:{" "}
+                    {product.availableSizes.map((x) => (
+                      <span>
+                        {" "}
+                        <button className="button">{x}</button>
+                      </span>
+                    ))}
+                  </p>
+                  <div className="product-price">
+                    <div>{formatCurrency(product.price)}</div>
+                    <button
+                      className="button primary"
+                      onClick={() => {
+                        this.props.addToCart(product);
+                        this.closeModal();
+                      }}
+                    >
+                      Add To Cart
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Zoom>
+          </Modal>
+        )}
       </div>
-    </div>
-  ));
-
-  return (
-    <>
-      <h1 className="text-white">Shopping Cart Using React-Redux</h1>
-      <div className="card-products">{cards}</div>
-    </>
-  );
-};
-
-export default Products;
+    );
+  }
+}
+export default connect(
+  (state) => ({ products: state.products.filteredItems }),
+  {
+    fetchProducts,
+    addToCart,
+  }
+)(Products);

@@ -1,30 +1,30 @@
-import "./App.css";
-import Cart from "./components/Cart";
-import Dashboard from "./components/Dashboard";
-import RootLayout from "./components/RootLayout";
+import React from "react";
+import store from "./store";
+import { Provider } from "react-redux";
+import { BrowserRouter, Route, Link } from "react-router-dom";
+import HomeScreen from "./screens/HomeScreen";
+import AdminScreen from "./screens/AdminScreen";
 
-import {
-  createBrowserRouter,
-  createRoutesFromElements,
-  Route,
-  RouterProvider,
-  
-} from "react-router-dom";
-
-function App() {
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route path="/" element={<RootLayout />}>
-        <Route index element={<Dashboard />}></Route>
-        <Route path="/cart" element={<Cart />}></Route>
-      </Route>
-    )
-  );
-  return (
-    <div className="App">
-      <RouterProvider router={router} />
-    </div>
-  );
+class App extends React.Component {
+  render() {
+    return (
+      <Provider store={store}>
+        <BrowserRouter>
+          <div className="grid-container">
+            <header>
+              <Link to="/">React Shopping Cart</Link>
+              <Link to="/admin">Admin</Link>
+            </header>
+            <main>
+              <Route path="/admin" component={AdminScreen} />
+              <Route path="/" component={HomeScreen} exact />
+            </main>
+            <footer>All right is reserved.</footer>
+          </div>
+        </BrowserRouter>
+      </Provider>
+    );
+  }
 }
 
 export default App;
